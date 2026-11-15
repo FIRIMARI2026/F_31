@@ -1,6 +1,6 @@
 """
 ================================================================================
-LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v18.1 Vision)
+LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v18.2 Vision)
 MUALLIF: Farrux G'aybilloyev (Tiliton Tashkiloti)
 ================================================================================
 """
@@ -23,7 +23,7 @@ AVAILABLE_MODELS = [
 ]
 
 st.set_page_config(
-    page_title="Firimari AI v18.1 Vision",
+    page_title="Firimari AI v18.2 Vision",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -179,7 +179,7 @@ SINFLAR_ROYXATI = [
 ]
 
 with st.sidebar:
-  st.markdown("## FIRIMARI AI v18.1")
+  st.markdown("## FIRIMARI AI v18.2")
   st.info(
       f"Obuna: **{st.session_state.sub_type}**\nNarxi:"
       f" **{st.session_state.sub_price}**"
@@ -201,4 +201,213 @@ with st.sidebar:
 
   tanlangan_model = st.selectbox("AI Model:", AVAILABLE_MODELS)
   auto_fallback = st.checkbox("Avtomatik zaxira modelga o'tish", value=True)
-  tanlangan_
+  tanlangan_fan = st.selectbox(
+      "Fan yo'nalishi:", list(MAKTAB_FANLARI_BAZASI.keys())
+  )
+  tanlangan_sinf = st.selectbox("Sinf:", SINFLAR_ROYXATI)
+
+  if st.button("Yangi chat"):
+    st.session_state.messages = []
+    st.rerun()
+
+fan_info = MAKTAB_FANLARI_BAZASI[tanlangan_fan]
+
+
+def call_gemini_vision_engine(
+    prompt_text,
+    system_text,
+    model_name,
+    api_key,
+    image_bytes=None,
+    mime_type="image/jpeg",
+):
+  url = (
+      "https://generativelanguage.googleapis.com/v1beta/models/"
+      + model_name
+      + ":generateContent?key="
+      + api_key
+  )
+
+  parts = [{"text": prompt_text}]
+  if image_bytes:
+    encoded_img = base64.b64encode(image_bytes).decode("utf-8")
+    parts.append({
+        "inline_data": {"mime_type": mime_type, "data": encoded_img}
+    })
+
+  payload = {
+      "system_instruction": {"parts": [{"text": system_text}]},
+      "contents": [{"role": "user", "parts": parts}],
+      "generationConfig": {"temperature": 0.5, "maxOutputTokens": 4096},
+  }
+
+  headers = {"Content-Type": "application/json"}
+  try:
+    req = urllib.request.Request(
+        url, data=json.dumps(payload).encode("utf-8"), headers=headers
+    )
+    with urllib.request.urlopen(req, timeout=50) as resp:
+      data = json.loads(resp.read().decode("utf-8"))
+      return True, data["candidates"][0]["content"]["parts"][0]["text"]
+  except Exception as e:
+    return False, str(e)
+
+
+st.title(f"{fan_info['icon']} Firimari AI — Imperial Ta'lim Tizimi")
+st.markdown(
+    f"<div class='subject-banner'><b>Fan:</b> {tanlangan_fan} | <b>Sinf:</b>"
+    f" {tanlangan_sinf} | <b>Model:</b> {tanlangan_model}<br><small"
+    f" style='color:#a1a1aa;'>{fan_info['tavsif']}</small></div>",
+    unsafe_allow_html=True,
+)
+
+tabs = st.tabs([
+    "Jonli AI Chat & Rasm",
+    "Mavzular",
+    "Test va Sinov",
+    "Yangi Daftar (Eslatmalar)",
+    "Raqamli Kutubxona",
+    "Kalkulyator",
+    "Python Terminal",
+])
+
+with tabs[0]:
+  for idx, m in enumerate(st.session_state.messages):
+    with st.chat_message(m["role"]):
+      st.markdown(m["content"])
+      if m.get("image"):
+        st.image(m["image"], caption="Yuklangan rasm", width=300)
+
+  uploaded_file = st.file_uploader(
+      "Rasm yuklash (Ixtiyoriy - masalan masala yoki chizma):",
+      type=["jpg", "jpeg", "png"],
+  )
+  user_input = st.chat_input("Savolingizni yozing yoki rasm bo'yicha so'rang...")
+
+  if user_input or uploaded_file:
+    prompt = (
+        user_input if user_input else "Bu rasmda nima tasvirlangan? Tushuntirib ber."
+    )
+    img_bytes = uploaded_file.getvalue() if uploaded_file else None
+    mime = uploaded_file.type if uploaded_file else "image/jpeg"
+
+    msg_payload = {"role": "user", "content": prompt}
+    if uploaded_file:
+      msg_payload["image"] = img_bytes
+    st.session_state.messages.append(msg_payload)
+    st.session_state.xp += 5
+
+    with st.chat_message("user"):
+      st.markdown(prompt)
+      if uploaded_file:
+        st.image(uploaded_file, width=300)
+
+    with st.chat_message("assistant"):
+      with st.spinner(f"{tanlangan_model} tahlil qilmoqda..."):
+        sys_prompt = (
+            f"Sen Farrux G'aybilloyev yaratgan Firimari Aisan. Fan:"
+            f" {tanlangan_fan}, Sinf: {tanlangan_sinf}."
+            f" {fan_info['yo_riqnoma']}"
+        )
+        success, resp = call_gemini_vision_engine(
+            prompt,
+            sys_prompt,
+            tanlangan_model,
+            active_key,
+            image_bytes=img_bytes,
+            mime_type=mime,
+        )
+        st.markdown(resp)
+      st.session_state.messages.append({"role": "assistant", "content": resp})
+    st.rerun()
+
+with tabs[1]:
+  st.subheader(f"{tanlangan_fan} — Asosiy bo'limlar")
+  for b in fan_info["asosiy_bolimlar"]:
+    st.markdown(f"- {b}")
+  st.markdown("---")
+  st.markdown("### Tezkor savollar:")
+  cols = st.columns(2)
+  for idx, s in enumerate(fan_info["tezkor_savollar"]):
+    with cols[idx % 2]:
+      if st.button(s, key=f"q_{idx}", use_container_width=True):
+        st.session_state.pending_prompt = s
+        st.rerun()
+
+with tabs[2]:
+  st.subheader("Avtomatik Test Tizimi")
+  t_mavzu = st.text_input("Test mavzusi (ixtiyoriy):")
+  t_soni = st.selectbox("Savollar soni:", [5, 10], index=0)
+
+  if st.button("Test tuzishni boshlash", type="primary"):
+    t_prompt = (
+        f"{tanlangan_fan} fanidan ({tanlangan_sinf}) "
+        f"'{t_mavzu if t_mavzu else tanlangan_fan}' bo'yicha {t_soni} ta test"
+        " tuz. Variantlari (A, B, C, D) va oxirida javoblarini ber."
+    )
+    with st.spinner("Test tuzilmoqda..."):
+      success, test_res = call_gemini_vision_engine(
+          t_prompt,
+          "Sen qattiqqo'l fan o'qituvchisisan.",
+          tanlangan_model,
+          active_key,
+      )
+      st.session_state.generated_test = test_res
+      st.session_state.xp += 20
+
+  if st.session_state.generated_test:
+    st.markdown("---")
+    st.markdown(st.session_state.generated_test)
+
+with tabs[3]:
+  st.subheader("📝 Yangi Daftar (Shaxsiy Eslatmalar va G'oyalar)")
+  st.write("O'zingizning shaxsiy eslatmalaringizni yozib saqlang:")
+
+  note_title = st.text_input("Daftar mavzusi / sarlavhasi:")
+  note_content = st.text_area("Yozuv va qaydlar mazmuni:")
+
+  if st.button("Daftarga qo'shish"):
+    if note_title:
+      st.session_state.saved_notes.append((note_title, note_content))
+      st.success("Yangi daftarga muvaffaqiyatli yozildi!")
+      st.rerun()
+    else:
+      st.error("Iltimos, daftar mavzusini kiriting!")
+
+  st.markdown("---")
+  for title, content in st.session_state.saved_notes:
+    with st.expander(f"📖 {title}"):
+      st.write(content)
+
+with tabs[4]:
+  st.subheader("Raqamli Kutubxona")
+  for title, content in st.session_state.library_books:
+    with st.expander(title):
+      st.write(content)
+
+with tabs[5]:
+  st.subheader("Ilmiy Kalkulyator")
+  expr = st.text_input("Ifodani kiriting (masalan: 15 * 8 + 50):")
+  if st.button("Hisoblash"):
+    try:
+      st.success(f"Natija: {eval(expr)}")
+    except Exception as e:
+      st.error(f"Xatolik: {e}")
+
+with tabs[6]:
+  st.subheader("Python Kod Muhiti")
+  code = st.text_area("Python kodini yozing:", value="print('Salom, Tiliton!')")
+  if st.button("Kodni bajarish"):
+    try:
+      import io
+      import sys
+
+      old = sys.stdout
+      new = io.StringIO()
+      sys.stdout = new
+      exec(code)
+      sys.stdout = old
+      st.code(new.getvalue() if new.getvalue() else "Kod bajarildi.")
+    except Exception as e:
+      st.error(f"Xatolik: {e}")
+        
