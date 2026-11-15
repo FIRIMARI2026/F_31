@@ -1,12 +1,12 @@
 """
 ================================================================================
-LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v16.6)
+LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v16.7 - Timer bilan)
 MUALLIF: Farrux G'aybilloyev (Tiliton Tashkiloti)
 TEXNOLOGIYALAR: Python, Streamlit, Google Gemini, Firebase
 ================================================================================
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
 import urllib.error
@@ -26,7 +26,7 @@ AVAILABLE_MODELS = [
 ]
 
 st.set_page_config(
-    page_title="Firimari AI v16.6",
+    page_title="Firimari AI v16.7",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -74,14 +74,16 @@ def init_firebase():
 
 db = init_firebase()
 
-# --- OBUNA VA PAROL TIZIMI (SaaS) ---
+# --- AVTOMATIK MUDDATLI OBUNA VA TAYMER TIZIMI ---
+# days: obuna amal qilish muddati (kunlarda). None = abadiy (Admin uchun)
 VALID_SUBSCRIPTIONS = {
-    "T-1M-39K": {"type": "1 oylik obuna", "price": "39,999 UZS"},
-    "T-3M-110K": {"type": "3 oylik obuna", "price": "109,999 UZS"},
-    "T-6M-200K": {"type": "6 oylik obuna", "price": "199,999 UZS"},
+    "T-1M-39K": {"type": "1 oylik obuna", "price": "39,999 UZS", "days": 30},
+    "T-3M-110K": {"type": "3 oylik obuna", "price": "109,999 UZS", "days": 90},
+    "T-6M-200K": {"type": "6 oylik obuna", "price": "199,999 UZS", "days": 180},
     "Tiliton-Admin-Master": {
         "type": "Bosh Muhandis (Admin)",
         "price": "Bepul / Asoschisi",
+        "days": None,
     },
 }
 
@@ -91,10 +93,18 @@ if "sub_type" not in st.session_state:
   st.session_state.sub_type = ""
 if "sub_price" not in st.session_state:
   st.session_state.sub_price = ""
+if "expiry_date" not in st.session_state:
+  st.session_state.expiry_date = None
 
-# Agar foydalanuvchi tizimga kirmagan bo'lsa, obuna oynasini ko'rsatamiz
+# Kirish vaqtida muddatni tekshirish
+if st.session_state.authenticated and st.session_state.expiry_date is not None:
+  if datetime.now() > st.session_state.expiry_date:
+    st.session_state.authenticated = False
+    st.warning("Sizning obuna muddatingiz tugadi! Iltimos, qaytadan obuna bo'ling.")
+
+# Agar foydalanuvchi tizimga kirmagan bo'lsa
 if not st.session_state.authenticated:
-  st.title("🔒 Firimari Aisan — Obuna Tizimi")
+  st.title("🔒 Firimari Aisan — Obuna Tizimi & Taymer")
   st.write(
       "Platformadan foydalanish uchun obuna parolingizni kiriting. (1 oylik"
       " obuna: 39,999 UZS)"
@@ -106,9 +116,18 @@ if not st.session_state.authenticated:
 
   if st.button("Kirish"):
     if entered_code in VALID_SUBSCRIPTIONS:
+      sub_info = VALID_SUBSCRIPTIONS[entered_code]
       st.session_state.authenticated = True
-      st.session_state.sub_type = VALID_SUBSCRIPTIONS[entered_code]["type"]
-      st.session_state.sub_price = VALID_SUBSCRIPTIONS[entered_code]["price"]
+      st.session_state.sub_type = sub_info["type"]
+      st.session_state.sub_price = sub_info["price"]
+
+      if sub_info["days"] is not None:
+        st.session_state.expiry_date = datetime.now() + timedelta(
+            days=sub_info["days"]
+        )
+      else:
+        st.session_state.expiry_date = None  # Admin uchun cheklov yo'q
+
       st.success(
           f"Xush kelibsiz, Farrux! Faollashgan obuna: {st.session_state.sub_type}"
           f" ({st.session_state.sub_price})"
@@ -352,20 +371,31 @@ FLASHCARDS_DATA = {
 
 # Sidebar controls
 with st.sidebar:
-  st.markdown("## FIRIMARI AI v16.6")
+  st.markdown("## FIRIMARI AI v16.7")
   st.caption("Ultimate Imperial Ta'lim Tizimi")
   st.markdown("---")
 
-  # Obuna holatini sidebar'da ko'rsatish
-  st.markdown("### 💳 Obuna Holati")
+  # Obuna va qolgan vaqtni sidebar'da ko'rsatish
+  st.markdown("### 💳 Obuna & Taymer Holati")
   st.info(
       f"Faol: **{st.session_state.sub_type}**\nNarxi:"
       f" **{st.session_state.sub_price}**"
   )
+  if st.session_state.expiry_date:
+    qolgan_vaqt = st.session_state.expiry_date - datetime.now()
+    kunlar = qolgan_vaqt.days
+    if kunlar >= 0:
+      st.warning(f"⏳ Qolgan vaqt: **{kunlar} kun** qoldi")
+    else:
+      st.error("⚠️ Obuna muddati tugadi!")
+  else:
+    st.success("♾️ Abadiy Admin Kirishi")
+
   if st.button("Chiqish (Logout)", use_container_width=True):
     st.session_state.authenticated = False
     st.session_state.sub_type = ""
     st.session_state.sub_price = ""
+    st.session_state.expiry_date = None
     st.rerun()
 
   st.markdown("---")
@@ -665,98 +695,4 @@ with tab_cards:
 with tab_shifr:
   st.subheader("Godrik Tili va Shifr Generator")
   plain_text = st.text_area("Matnni kiriting:")
-  shifr_turi = st.radio(
-      "Shifrlash usuli:",
-      ["Tersiga o'qish (Revers)", "Godrik Tili (Sirli kod)", "Aylanma shifr"],
-  )
-
-  if st.button("Shifrlash"):
-    if shifr_turi == "Tersiga o'qish (Revers)":
-      res = plain_text[::-1]
-    elif shifr_turi == "Godrik Tili (Sirli kod)":
-      res = "".join(
-          [chr(ord(c) + 3) if c.isalpha() else c for c in plain_text]
-      )
-    else:
-      res = " -.-. ".join([format(ord(c), "b") for c in plain_text])
-    st.code(res)
-
-with tab_memory:
-  st.subheader("Shaxsiy Xotira Daftari")
-  st.write("AI eslab qolishi kerak bo'lgan muhim qoidalar va eslatmalar.")
-  if not st.session_state.saved_notes:
-    st.info("Hozircha xotira daftari bo'sh.")
-  else:
-    for i, n in enumerate(st.session_state.saved_notes):
-      with st.expander(
-          "Xotira #" + str(i + 1) + ": " + n["fan"] + " (" + n["vaqt"] + ")"
-      ):
-        st.markdown(n["matn"])
-    if st.button("Xotirani tozalash"):
-      st.session_state.saved_notes = []
-      st.rerun()
-
-with tab_lib:
-  st.subheader("Raqamli Kutubxona")
-  st.write("Shaxsiy kitoblar va materiallar bazasi.")
-
-  with st.form("add_book_form"):
-    b_nomi = st.text_input("Kitob yoki material nomi:")
-    b_mazmuni = st.text_area("Qisqacha mazmuni yoki matni:")
-    submit_book = st.form_submit_button("Kutubxonaga qo'shish")
-    if submit_book and b_nomi:
-      st.session_state.library_books.append(
-          {"nomi": b_nomi, "mazmuni": b_mazmuni}
-      )
-      st.success("'" + b_nomi + "' kutubxonaga qo'shildi!")
-      st.rerun()
-
-  st.markdown("---")
-  st.markdown("### Kutubxonadagi materiallar:")
-  for idx, book in enumerate(st.session_state.library_books):
-    with st.expander(book["nomi"]):
-      st.write(book["mazmuni"])
-
-with tab_timer:
-  st.subheader("Pomodoro Taymeri va Vazifalar")
-  col_t1, col_t2 = st.columns(2)
-  with col_t1:
-    st.info("25 daqiqa dars / 5 daqiqa dam olish")
-    if st.button("Seansni boshlash"):
-      st.success("Diqqat rejimi yoqildi!")
-  with col_t2:
-    st.markdown("### Vazifalar:")
-    for t in st.session_state.tasks:
-      st.markdown("- " + t["vazifa"] + " (" + t["holat"] + ")")
-
-with tab_calc:
-  st.subheader("Ilmiy va Muhandislik Kalkulyatori")
-  if_expr = st.text_input(
-      "Ifodani kiriting (masalan: 5 * 8 + 10 / 2 yoki 2**10):"
-  )
-  if st.button("Hisoblash"):
-    try:
-      ans = eval(if_expr)
-      st.success("Natija: " + str(ans))
-    except Exception as e:
-      st.error("Xatolik: " + str(e))
-
-with tab_term:
-  st.subheader("Mini Python Kod Muhiti")
-  code_input = st.text_area(
-      "Python kodini yozing:", value="print('Salom, Tiliton Tashkiloti!')"
-  )
-  if st.button("Kodni bajarish"):
-    try:
-      import io
-      import sys
-
-      old_stdout = sys.stdout
-      new_stdout = io.StringIO()
-      sys.stdout = new_stdout
-      exec(code_input)
-      sys.stdout = old_stdout
-      output = new_stdout.getvalue()
-      st.code(output if output else "Kod bajarildi (Natija yo'q)")
-    except Exception as e:
-      st.error("Xatolik: " + str(e))
+  sh
