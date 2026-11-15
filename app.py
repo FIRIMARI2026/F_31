@@ -343,4 +343,191 @@ MAKTAB_FANLARI_BAZASI = {
             "Jadidchilik harakati",
         ],
         "tezkor_savollar": [
-            "
+            "Qadimgi Xorazm va Baqtriya haqida nimalarni bilasan?",
+            "Mirzo Ulug'bekning ilmiy merosi qanday?",
+        ],
+    },
+}
+
+SINFLAR_ROYXATI = [
+    "Barcha sinflar (1–11-sinf)",
+    "5-sinf",
+    "6-sinf",
+    "7-sinf",
+    "8-sinf",
+    "9-sinf",
+    "10-sinf",
+    "11-sinf",
+]
+
+FLASHCARDS_DATA = {
+    "Fizika va Astronomiya": [
+        (
+            "Nyutonning 1-qonuni nima?",
+            (
+                "Jism tashqi kuch ta'sir qilmaguncha tinch holatini yoki to'g'ri"
+                " chiziqli tekis harakatini saqlaydi."
+            ),
+        ),
+        (
+            "Om qonuni formulasi?",
+            "I = U / R (Tok kuchi kuchlanishga to'g'ri, qarshilikka teskari"
+            " proporsional).",
+        ),
+    ],
+    "Matematika": [
+        (
+            "Diskriminant formulasi?",
+            "D = b^2 - 4ac (D > 0 bo'lsa 2 ta ildizga ega).",
+        ),
+        ("Pifagor teoremasi?", "a^2 + b^2 = c^2"),
+    ],
+}
+
+with st.sidebar:
+  st.markdown("## FIRIMARI AI v16.9")
+  st.caption("Ultimate Imperial Ta'lim Tizimi")
+  st.markdown("---")
+
+  st.markdown("### 💳 Obuna & Taymer Holati")
+  st.info(
+      f"Faol: **{st.session_state.sub_type}**\nNarxi:"
+      f" **{st.session_state.sub_price}**"
+  )
+  if st.session_state.expiry_date:
+    qolgan_vaqt = st.session_state.expiry_date - datetime.now()
+    kunlar = qolgan_vaqt.days
+    if kunlar >= 0:
+      st.warning(f"⏳ Qolgan vaqt: **{kunlar} kun** qoldi")
+    else:
+      st.error("⚠️ Obuna muddati tugadi!")
+  else:
+    st.success("♾️ Abadiy Admin Kirishi")
+
+  if st.button("Chiqish (Logout)", use_container_width=True):
+    st.session_state.authenticated = False
+    st.session_state.sub_type = ""
+    st.session_state.sub_price = ""
+    st.session_state.expiry_date = None
+    st.rerun()
+
+  st.markdown("---")
+  st.markdown("### Tiliton Profili")
+  st.write("Foydalanuvchi: Farrux G'aybilloyev")
+  st.write("Unvon: Bosh Muhandis / Asoschisi")
+  st.metric(label="XP (Tajriba ochko)", value=int(st.session_state.xp))
+
+  st.markdown("---")
+  st.markdown("### AI Ustoz Xarakteri")
+  ai_persona = st.selectbox(
+      "Ustoz uslubi:",
+      [
+          "Jonkuyar Repetitor (Sodda va qiziqarli)",
+          "Qattiqqo'l Fan Olimpiadasi Murabbiyi",
+          "Ilmiy Professor (Chuqur faktlar bilan)",
+          "Multi-Persona (Barcha ustozlar birga)",
+      ],
+      index=0,
+  )
+
+  st.markdown("---")
+  st.markdown("### Model va Kalit")
+  tanlangan_model = st.selectbox("AI Model:", AVAILABLE_MODELS, index=0)
+  auto_fallback = st.checkbox("Avtomatik zaxira modelga o'tish", value=True)
+
+  with st.expander("API Kalit sozlamasi"):
+    kiritilgan_kalit = st.text_input(
+        "Google AI Studio API Key:", value=DEFAULT_API_KEY, type="password"
+    )
+  faol_kalit = (
+      kiritilgan_kalit.strip() if kiritilgan_kalit.strip() else DEFAULT_API_KEY
+  )
+
+  st.markdown("---")
+  st.markdown("### Darslik Sozlamalari")
+  tanlangan_fan = st.selectbox(
+      "Fan yo'nalishi:", list(MAKTAB_FANLARI_BAZASI.keys()), index=0
+  )
+  tanlangan_sinf = st.selectbox("Sinf darajasi:", SINFLAR_ROYXATI, index=0)
+
+  st.markdown("---")
+  c1, c2 = st.columns(2)
+  with c1:
+    if st.button("Yangi chat", use_container_width=True):
+      st.session_state.messages = []
+      st.session_state.pending_prompt = None
+      st.rerun()
+  with c2:
+    if st.button("Tozalash", type="primary", use_container_width=True):
+      st.session_state.messages = []
+      st.session_state.pending_prompt = None
+      st.rerun()
+
+  st.markdown("---")
+  st.metric(label="Suhbatdagi xabarlar", value=len(st.session_state.messages))
+  st.caption("© 2026 Tiliton Tashkiloti | Farrux G'aybilloyev")
+
+fan_info = MAKTAB_FANLARI_BAZASI[tanlangan_fan]
+
+
+def build_system_prompt():
+  if "Repetitor" in ai_persona:
+    persona_desc = (
+        "Sen jonkuyar repetitorsan. Murakkab mavzularni oddiy hayotiy misollar"
+        " bilan tushuntirasan."
+    )
+  elif "Murabbiy" in ai_persona:
+    persona_desc = (
+        "Sen qattiqqo'l olimpiada murabbiyisan. O'quvchini chuqur o'ylashga"
+        " majbur qiladigan savollar berasan."
+    )
+  elif "Professor" in ai_persona:
+    persona_desc = (
+        "Sen ilmiy professorsan. Aniq ilmiy atamalar va chuqur tahlillar bilan"
+        " javob berasan."
+    )
+  else:
+    persona_desc = (
+        "Sen Multi-Personasan: repetitor, murabbiy va professor vazifalarini"
+        " bajarib javob berasan."
+    )
+
+  xotira_matni = ""
+  if st.session_state.saved_notes:
+    for n in st.session_state.saved_notes:
+      xotira_matni += "- " + n["matn"] + "\n"
+  else:
+    xotira_matni = "Hozircha maxsus xotiralar yo'q."
+
+  kutubxona_matni = ""
+  if st.session_state.library_books:
+    for b in st.session_state.library_books:
+      kutubxona_matni += "- " + b["nomi"] + ": " + b["mazmuni"] + "\n"
+
+  return (
+      "Sen Farrux G'aybilloyev yaratgan Firimari Aisan — onlayn va jonli"
+      " ishlaydigan ta'lim platformasisan.\nXaraktering: "
+      + persona_desc
+      + "\n\nFan va sinf:\n- Fan: "
+      + tanlangan_fan
+      + "\n- Sinf: "
+      + tanlangan_sinf
+      + "\n"
+      + fan_info["yo_riqnoma"]
+      + "\n\nXotira daftari:\n"
+      + xotira_matni
+      + "\n\nKutubxona:\n"
+      + kutubxona_matni
+      + "\n\nQoidalar:\n1. Doimo sof va ravon O'zbek tilida javob ber.\n2."
+      " Matematik va fizik formulalarni LaTeX formatida yoz.\n3. Xotira va"
+      " kutubxonaga tayanib ish ko'r."
+  )
+
+
+st.title(fan_info["icon"] + " Firimari AI — Imperial Ta'lim Platformasi")
+st.markdown(
+    "<div class='subject-banner'><b>Fan:</b> "
+    + tanlangan_fan
+    + " | <b>Sinf:</b> "
+    + tanlangan_sinf
+    + " | <b>Model:</b> "
