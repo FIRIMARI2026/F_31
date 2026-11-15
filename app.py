@@ -1,6 +1,9 @@
 """
-LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v16.9)
+================================================================================
+LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v17.0)
 MUALLIF: Farrux G'aybilloyev (Tiliton Tashkiloti)
+TEXNOLOGIYALAR: Python, Streamlit, Google Gemini API
+================================================================================
 """
 
 from datetime import datetime, timedelta
@@ -20,7 +23,7 @@ AVAILABLE_MODELS = [
 ]
 
 st.set_page_config(
-    page_title="Firimari AI v16.9",
+    page_title="Firimari AI v17.0 Imperial",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -47,7 +50,7 @@ VALID_SUBSCRIPTIONS = {
     "T-6M-200K": {"type": "6 oylik obuna", "price": "199,999 UZS", "days": 180},
     "Tiliton-Admin-Master": {
         "type": "Bosh Muhandis (Admin)",
-        "price": "Bepul",
+        "price": "Bepul / Asoschisi",
         "days": None,
     },
 }
@@ -114,14 +117,23 @@ if "messages" not in st.session_state:
 if "saved_notes" not in st.session_state:
   st.session_state.saved_notes = []
 if "library_books" not in st.session_state:
-  st.session_state.library_books = [{
-      "nomi": "Godrik Tili va Shifrlar",
-      "mazmuni": "Farruxning shaxsiy shifrlari.",
-  }]
+  st.session_state.library_books = [
+      {
+          "nomi": "Godrik Tili va Shifrlar",
+          "mazmuni": "Farruxning shaxsiy shifrlari va loyihalari.",
+      },
+      {
+          "nomi": "Fizika va Matematika Formulalari",
+          "mazmuni": "Kinematika va dinamika asoslari.",
+      },
+  ]
 if "xp" not in st.session_state:
-  st.session_state.xp = 270
+  st.session_state.xp = 350
 if "tasks" not in st.session_state:
-  st.session_state.tasks = [{"vazifa": "Fizika takrorlash", "holat": "Faol"}]
+  st.session_state.tasks = [
+      {"vazifa": "Fizika qonunlarini takrorlash", "holat": "Faol"},
+      {"vazifa": "Python Telegram bot yozish", "holat": "Bajarildi"},
+  ]
 if "pending_prompt" not in st.session_state:
   st.session_state.pending_prompt = None
 if "generated_test" not in st.session_state:
@@ -136,14 +148,14 @@ MAKTAB_FANLARI_BAZASI = {
             " platformasisan."
         ),
         "asosiy_bolimlar": ["Aniq fanlar", "Tabiiy fanlar", "Ijtimoiy fanlar"],
-        "tezkor_savollar": ["Nyutonning uchta qonunini tushuntir"],
+        "tezkor_savollar": ["Nyutonning uchta qonunini hayotiy misol bilan ayt"],
     },
     "Fizika va Astronomiya": {
         "icon": "⚡",
         "tavsif": "Mexanika, termodinamika va elektr.",
         "yo_riqnoma": "Sen fizika va astronomiya mutaxassissan.",
         "asosiy_bolimlar": ["Kinematika", "Dinamika", "Om qonuni"],
-        "tezkor_savollar": ["Om qonuni nima?"],
+        "tezkor_savollar": ["Om qonuni nima va qanday ishlatiladi?"],
     },
     "Matematika": {
         "icon": "📐",
@@ -157,7 +169,7 @@ MAKTAB_FANLARI_BAZASI = {
         "tavsif": "O'zbekiston va jahon tarixi.",
         "yo_riqnoma": "Sen tarix fanidan mutaxassissan.",
         "asosiy_bolimlar": ["Temuriylar davri", "Buyuk Ipak yo'li"],
-        "tezkor_savollar": ["Amir Temur davri haqida ayt"],
+        "tezkor_savollar": ["Amir Temur davri boshqaruvi haqida ayt"],
     },
 }
 
@@ -173,7 +185,7 @@ SINFLAR_ROYXATI = [
 ]
 
 with st.sidebar:
-  st.markdown("## FIRIMARI AI v16.9")
+  st.markdown("## FIRIMARI AI v17.0")
   st.info(
       f"Obuna: **{st.session_state.sub_type}**\nNarxi:"
       f" **{st.session_state.sub_price}**"
@@ -184,10 +196,12 @@ with st.sidebar:
 
   st.markdown("---")
   st.write("Foydalanuvchi: Farrux G'aybilloyev")
-  st.metric(label="XP (Tajriba)", value=int(st.session_state.xp))
+  st.write("Unvon: Bosh Muhandis")
+  st.metric(label="XP (Tajriba ochko)", value=int(st.session_state.xp))
 
   st.markdown("---")
   tanlangan_model = st.selectbox("AI Model:", AVAILABLE_MODELS)
+  auto_fallback = st.checkbox("Avtomatik zaxira modelga o'tish", value=True)
   tanlangan_fan = st.selectbox(
       "Fan yo'nalishi:", list(MAKTAB_FANLARI_BAZASI.keys())
   )
@@ -200,38 +214,75 @@ with st.sidebar:
 fan_info = MAKTAB_FANLARI_BAZASI[tanlangan_fan]
 
 
-def call_gemini_engine(prompt_text, system_text, model_name, api_key):
-  url = (
-      "https://generativelanguage.googleapis.com/v1beta/models/"
-      + model_name
-      + ":generateContent?key="
-      + api_key
-  )
+def call_gemini_engine(
+    prompt_text,
+    system_text,
+    model_name,
+    api_key,
+    history_list=None,
+    auto_fallback=True,
+):
+  contents = []
+  if history_list:
+    for msg in history_list[-8:]:
+      role = "user" if msg["role"] == "user" else "model"
+      contents.append({"role": role, "parts": [{"text": msg["content"]}]})
+  contents.append({"role": "user", "parts": [{"text": prompt_text}]})
+
   payload = {
       "system_instruction": {"parts": [{"text": system_text}]},
-      "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
-      "generationConfig": {"temperature": 0.5},
+      "contents": contents,
+      "generationConfig": {"temperature": 0.5, "maxOutputTokens": 4096},
   }
-  headers = {"Content-Type": "application/json"}
-  try:
-    req = urllib.request.Request(
-        url, data=json.dumps(payload).encode("utf-8"), headers=headers
+
+  def send_request(target_model):
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        + target_model
+        + ":generateContent?key="
+        + api_key
     )
-    with urllib.request.urlopen(req, timeout=35) as resp:
-      data = json.loads(resp.read().decode("utf-8"))
-      return data["candidates"][0]["content"]["parts"][0]["text"]
-  except Exception as e:
-    return f"Xatolik: {e}"
+    headers = {"Content-Type": "application/json"}
+    try:
+      req = urllib.request.Request(
+          url, data=json.dumps(payload).encode("utf-8"), headers=headers
+      )
+      with urllib.request.urlopen(req, timeout=40) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+        return True, data["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception as e:
+      return False, str(e)
+
+  success, result = send_request(model_name)
+  if success:
+    return result
+
+  if auto_fallback:
+    for backup_model in AVAILABLE_MODELS:
+      if backup_model != model_name:
+        s_b, r_b = send_request(backup_model)
+        if s_b:
+          return (
+              f"*(Zaxira model: **{backup_model}** orqali bajarildi)*\n\n{r_b}"
+          )
+
+  return f"Xatolik: Barcha modellar javob bermadi. Tafsilot: {result}"
 
 
-st.title(f"{fan_info['icon']} Firimari AI — {tanlangan_fan}")
+st.title(f"{fan_info['icon']} Firimari AI — Imperial Ta'lim Tizimi")
+st.markdown(
+    f"<div class='subject-banner'><b>Fan:</b> {tanlangan_fan} | <b>Sinf:</b>"
+    f" {tanlangan_sinf} | <b>Model:</b> {tanlangan_model}<br><small"
+    f" style='color:#a1a1aa;'>{fan_info['tavsif']}</small></div>",
+    unsafe_allow_html=True,
+)
 
 tabs = st.tabs([
     "Jonli AI Chat",
     "Mavzular",
-    "Test",
+    "Test va Sinov",
     "Xotira Daftari",
-    "Kutubxona",
+    "Raqamli Kutubxona",
     "Kalkulyator",
     "Python Terminal",
 ])
@@ -240,6 +291,11 @@ with tabs[0]:
   for idx, m in enumerate(st.session_state.messages):
     with st.chat_message(m["role"]):
       st.markdown(m["content"])
+      if m["role"] == "assistant" and "❌" not in m["content"]:
+        if st.button("Xotiraga qo'shish", key=f"s_note_{idx}"):
+          st.session_state.saved_notes.append(m["content"])
+          st.session_state.xp += 10
+          st.toast("Xotiraga muvaffaqiyatli qo'shildi! (+10 XP)")
 
   user_input = st.chat_input("Savolingizni yozing...")
   prompt = (
@@ -252,79 +308,85 @@ with tabs[0]:
 
   if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.xp += 5
     with st.chat_message("user"):
       st.markdown(prompt)
 
     with st.chat_message("assistant"):
-      sys_prompt = (
-          f"Sen Farrux G'aybilloyev yaratgan Firimari Aisan. Fan: {tanlangan_fan},"
-          f" Sinf: {tanlangan_sinf}."
-      )
-      resp = call_gemini_engine(
-          prompt, sys_prompt, tanlangan_model, DEFAULT_API_KEY
-      )
-      st.markdown(resp)
+      with st.spinner(f"{tanlangan_model} javob bermoqda..."):
+        sys_prompt = (
+            f"Sen Farrux G'aybilloyev yaratgan Firimari Aisan. Fan:"
+            f" {tanlangan_fan}, Sinf: {tanlangan_sinf}."
+            f" {fan_info['yo_riqnoma']}"
+        )
+        resp = call_gemini_engine(
+            prompt,
+            sys_prompt,
+            tanlangan_model,
+            DEFAULT_API_KEY,
+            st.session_state.messages[:-1],
+            auto_fallback,
+        )
+        st.markdown(resp)
       st.session_state.messages.append({"role": "assistant", "content": resp})
     st.rerun()
 
 with tabs[1]:
-  st.subheader(f"{tanlangan_fan} bo'yicha asosiy bo'limlar")
+  st.subheader(f"{tanlangan_fan} — Asosiy bo'limlar")
   for b in fan_info["asosiy_bolimlar"]:
     st.markdown(f"- {b}")
+  st.markdown("---")
   st.markdown("### Tezkor savollar:")
-  for s in fan_info["tezkor_savollar"]:
-    if st.button(s):
-      st.session_state.pending_prompt = s
-      st.rerun()
+  cols = st.columns(2)
+  for idx, s in enumerate(fan_info["tezkor_savollar"]):
+    with cols[idx % 2]:
+      if st.button(s, key=f"q_{idx}", use_container_width=True):
+        st.session_state.pending_prompt = s
+        st.rerun()
 
 with tabs[2]:
   st.subheader("Avtomatik Test Tizimi")
-  t_mavzu = st.text_input("Test mavzusi:")
-  if st.button("Test tuzish"):
-    t_prompt = f"{tanlangan_fan} fanidan {t_mavzu} bo'yicha 5 ta test tuz (variantlari bilan)."
+  t_mavzu = st.text_input("Test mavzusi (ixtiyoriy):")
+  t_soni = st.selectbox("Savollar soni:", [5, 10], index=0)
+
+  if st.button("Test tuzishni boshlash", type="primary"):
+    t_prompt = (
+        f"{tanlangan_fan} fanidan ({tanlangan_sinf}) "
+        f"'{t_mavzu if t_mavzu else tanlangan_fan}' bo'yicha {t_soni} ta test"
+        " tuz. Variantlari (A, B, C, D) va oxirida javoblarini ber."
+    )
     with st.spinner("Test tuzilmoqda..."):
       st.session_state.generated_test = call_gemini_engine(
-          t_prompt, "Sen test tuzuvchi ustozsan.", tanlangan_model, DEFAULT_API_KEY
+          t_prompt,
+          "Sen qattiqqo'l fan o'qituvchisisan.",
+          tanlangan_model,
+          DEFAULT_API_KEY,
+          auto_fallback=auto_fallback,
       )
+      st.session_state.xp += 20
+
   if st.session_state.generated_test:
+    st.markdown("---")
     st.markdown(st.session_state.generated_test)
 
 with tabs[3]:
   st.subheader("Shaxsiy Xotira Daftari")
+  st.write("Chatda saqlangan muhim javoblar va qoidalar:")
   if not st.session_state.saved_notes:
-    st.info("Hozircha xotiralar yo'q.")
+    st.info("Hozircha saqlangan eslatmalar yo'q.")
   else:
-    for n in st.session_state.saved_notes:
-      st.markdown(f"- {n}")
+    for i, n in enumerate(st.session_state.saved_notes):
+      with st.expander(f"Eslatma #{i+1}"):
+        st.markdown(n)
+    if st.button("Xotirani tozalash"):
+      st.session_state.saved_notes = []
+      st.rerun()
 
 with tabs[4]:
   st.subheader("Raqamli Kutubxona")
-  for b in st.session_state.library_books:
-    with st.expander(b["nomi"]):
-      st.write(b["mazmuni"])
-
-with tabs[5]:
-  st.subheader("Kalkulyator")
-  expr = st.text_input("Ifodani kiriting (masalan: 25 * 4):")
-  if st.button("Hisoblash"):
-    try:
-      st.success(str(eval(expr)))
-    except Exception as e:
-      st.error(f"Xato: {e}")
-
-with tabs[6]:
-  st.subheader("Python Terminal")
-  code = st.text_area("Python kodini yozing:", value="print('Salom Tiliton!')")
-  if st.button("Bajarish"):
-    try:
-      import io
-      import sys
-
-      old = sys.stdout
-      new = io.StringIO()
-      sys.stdout = new
-      exec(code)
-      sys.stdout = old
-      st.code(new.getvalue())
-    except Exception as e:
-      st.error(f"Xato: {e}")
+  with st.form("add_book"):
+    b_nomi = st.text_input("Material nomi:")
+    b_mazmuni = st.text_area("Mazmuni yoki matni:")
+    if st.form_submit_button("Qo'shish") and b_nomi:
+      st.session_state.library_books.append(
+          {"nomi":
