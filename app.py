@@ -30,10 +30,11 @@ st.markdown(
     """
     <style>
     .stApp { background-color: #0f0f13; color: #f4f4f5; }
-    .stChatMessage { background-color: #18181b !important; border: 1px solid #27272a; border-radius: 14px; padding: 1.2rem 1.5rem; margin-bottom: 14px; }
+    .stChatMessage { background-color: #18181b !important; border: 1px solid #27272a; border-radius: 14px; padding: 1.2rem 1.5rem; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     pre { background-color: #09090b !important; border: 1px solid #27272a; border-radius: 10px; padding: 16px; }
     code { color: #34d399 !important; font-family: 'Consolas', monospace; }
     [data-testid="stSidebar"] { background-color: #09090b; border-right: 1px solid #27272a; }
+    .subject-banner { background: linear-gradient(135deg, #18181b 0%, #064e3b 100%); border-left: 5px solid #10b981; border: 1px solid #27272a; padding: 16px 20px; border-radius: 10px; margin-bottom: 16px; }
     .pricing-box { background: #18181b; border: 1px solid #27272a; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
     </style>
     """,
@@ -68,19 +69,22 @@ if not st.session_state.authenticated:
   with col1:
     st.markdown(
         "<div"
-        " class='pricing-box'><h4>1 Oylik</h4><p><b>39,999</b></p><p><small>T-1M-39K</small></p></div>",
+        " class='pricing-box'><h4>1 Oylik</h4><p><b>39,999 UZS</b></p><p><small>Kalit:"
+        " T-1M-39K</small></p></div>",
         unsafe_allow_html=True,
     )
   with col2:
     st.markdown(
         "<div"
-        " class='pricing-box'><h4>3 Oylik</h4><p><b>109,999</b></p><p><small>T-3M-110K</small></p></div>",
+        " class='pricing-box'><h4>3 Oylik</h4><p><b>109,999"
+        " UZS</b></p><p><small>Kalit: T-3M-110K</small></p></div>",
         unsafe_allow_html=True,
     )
   with col3:
     st.markdown(
         "<div"
-        " class='pricing-box'><h4>6 Oylik</h4><p><b>199,999</b></p><p><small>T-6M-200K</small></p></div>",
+        " class='pricing-box'><h4>6 Oylik</h4><p><b>199,999"
+        " UZS</b></p><p><small>Kalit: T-6M-200K</small></p></div>",
         unsafe_allow_html=True,
     )
 
@@ -104,11 +108,99 @@ if not st.session_state.authenticated:
       st.error("Xato parol yoki obuna muddati tugagan!")
   st.stop()
 
+# Sessiya holatlari
 if "messages" not in st.session_state:
   st.session_state.messages = []
+if "saved_notes" not in st.session_state:
+  st.session_state.saved_notes = []
+if "library_books" not in st.session_state:
+  st.session_state.library_books = [{
+      "nomi": "Godrik Tili va Shifrlar",
+      "mazmuni": "Farruxning shaxsiy shifrlari.",
+  }]
+if "xp" not in st.session_state:
+  st.session_state.xp = 270
+if "tasks" not in st.session_state:
+  st.session_state.tasks = [{"vazifa": "Fizika takrorlash", "holat": "Faol"}]
+if "pending_prompt" not in st.session_state:
+  st.session_state.pending_prompt = None
+if "generated_test" not in st.session_state:
+  st.session_state.generated_test = ""
+
+MAKTAB_FANLARI_BAZASI = {
+    "Barcha fanlar (Universal rejim)": {
+        "icon": "🌐",
+        "tavsif": "1-11-sinf maktab dasturidagi barcha fanlar.",
+        "yo_riqnoma": (
+            "Sen Farrux G'aybilloyev yaratgan Firimari Aisan — ta'lim"
+            " platformasisan."
+        ),
+        "asosiy_bolimlar": ["Aniq fanlar", "Tabiiy fanlar", "Ijtimoiy fanlar"],
+        "tezkor_savollar": ["Nyutonning uchta qonunini tushuntir"],
+    },
+    "Fizika va Astronomiya": {
+        "icon": "⚡",
+        "tavsif": "Mexanika, termodinamika va elektr.",
+        "yo_riqnoma": "Sen fizika va astronomiya mutaxassissan.",
+        "asosiy_bolimlar": ["Kinematika", "Dinamika", "Om qonuni"],
+        "tezkor_savollar": ["Om qonuni nima?"],
+    },
+    "Matematika": {
+        "icon": "📐",
+        "tavsif": "Algebra va geometriya.",
+        "yo_riqnoma": "Sen matematika mutaxassissan.",
+        "asosiy_bolimlar": ["Kvadrat tenglamalar", "Pifagor teoremasi"],
+        "tezkor_savollar": ["Diskriminant formulasi qanday?"],
+    },
+    "Tarix": {
+        "icon": "🏛️",
+        "tavsif": "O'zbekiston va jahon tarixi.",
+        "yo_riqnoma": "Sen tarix fanidan mutaxassissan.",
+        "asosiy_bolimlar": ["Temuriylar davri", "Buyuk Ipak yo'li"],
+        "tezkor_savollar": ["Amir Temur davri haqida ayt"],
+    },
+}
+
+SINFLAR_ROYXATI = [
+    "Barcha sinflar",
+    "5-sinf",
+    "6-sinf",
+    "7-sinf",
+    "8-sinf",
+    "9-sinf",
+    "10-sinf",
+    "11-sinf",
+]
+
+with st.sidebar:
+  st.markdown("## FIRIMARI AI v16.9")
+  st.info(
+      f"Obuna: **{st.session_state.sub_type}**\nNarxi:"
+      f" **{st.session_state.sub_price}**"
+  )
+  if st.button("Chiqish"):
+    st.session_state.authenticated = False
+    st.rerun()
+
+  st.markdown("---")
+  st.write("Foydalanuvchi: Farrux G'aybilloyev")
+  st.metric(label="XP (Tajriba)", value=int(st.session_state.xp))
+
+  st.markdown("---")
+  tanlangan_model = st.selectbox("AI Model:", AVAILABLE_MODELS)
+  tanlangan_fan = st.selectbox(
+      "Fan yo'nalishi:", list(MAKTAB_FANLARI_BAZASI.keys())
+  )
+  tanlangan_sinf = st.selectbox("Sinf:", SINFLAR_ROYXATI)
+
+  if st.button("Yangi chat"):
+    st.session_state.messages = []
+    st.rerun()
+
+fan_info = MAKTAB_FANLARI_BAZASI[tanlangan_fan]
 
 
-def call_gemini_engine(prompt_text, model_name, api_key):
+def call_gemini_engine(prompt_text, system_text, model_name, api_key):
   url = (
       "https://generativelanguage.googleapis.com/v1beta/models/"
       + model_name
@@ -116,6 +208,7 @@ def call_gemini_engine(prompt_text, model_name, api_key):
       + api_key
   )
   payload = {
+      "system_instruction": {"parts": [{"text": system_text}]},
       "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
       "generationConfig": {"temperature": 0.5},
   }
@@ -124,39 +217,114 @@ def call_gemini_engine(prompt_text, model_name, api_key):
     req = urllib.request.Request(
         url, data=json.dumps(payload).encode("utf-8"), headers=headers
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    with urllib.request.urlopen(req, timeout=35) as resp:
       data = json.loads(resp.read().decode("utf-8"))
       return data["candidates"][0]["content"]["parts"][0]["text"]
   except Exception as e:
     return f"Xatolik: {e}"
 
 
-with st.sidebar:
-  st.markdown("## FIRIMARI AI")
-  st.info(f"Faol: {st.session_state.sub_type}")
-  if st.button("Chiqish"):
-    st.session_state.authenticated = False
+st.title(f"{fan_info['icon']} Firimari AI — {tanlangan_fan}")
+
+tabs = st.tabs([
+    "Jonli AI Chat",
+    "Mavzular",
+    "Test",
+    "Xotira Daftari",
+    "Kutubxona",
+    "Kalkulyator",
+    "Python Terminal",
+])
+
+with tabs[0]:
+  for idx, m in enumerate(st.session_state.messages):
+    with st.chat_message(m["role"]):
+      st.markdown(m["content"])
+
+  user_input = st.chat_input("Savolingizni yozing...")
+  prompt = (
+      st.session_state.pending_prompt
+      if st.session_state.pending_prompt
+      else user_input
+  )
+  if st.session_state.pending_prompt:
+    st.session_state.pending_prompt = None
+
+  if prompt:
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+      st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+      sys_prompt = (
+          f"Sen Farrux G'aybilloyev yaratgan Firimari Aisan. Fan: {tanlangan_fan},"
+          f" Sinf: {tanlangan_sinf}."
+      )
+      resp = call_gemini_engine(
+          prompt, sys_prompt, tanlangan_model, DEFAULT_API_KEY
+      )
+      st.markdown(resp)
+      st.session_state.messages.append({"role": "assistant", "content": resp})
     st.rerun()
 
-  tanlangan_model = st.selectbox("Model:", AVAILABLE_MODELS)
-  tanlangan_fan = st.selectbox(
-      "Fan:", ["Barcha fanlar", "Fizika", "Matematika", "Tarix"]
-  )
+with tabs[1]:
+  st.subheader(f"{tanlangan_fan} bo'yicha asosiy bo'limlar")
+  for b in fan_info["asosiy_bolimlar"]:
+    st.markdown(f"- {b}")
+  st.markdown("### Tezkor savollar:")
+  for s in fan_info["tezkor_savollar"]:
+    if st.button(s):
+      st.session_state.pending_prompt = s
+      st.rerun()
 
-st.title(f"⚡ Firimari AI — {tanlangan_fan}")
+with tabs[2]:
+  st.subheader("Avtomatik Test Tizimi")
+  t_mavzu = st.text_input("Test mavzusi:")
+  if st.button("Test tuzish"):
+    t_prompt = f"{tanlangan_fan} fanidan {t_mavzu} bo'yicha 5 ta test tuz (variantlari bilan)."
+    with st.spinner("Test tuzilmoqda..."):
+      st.session_state.generated_test = call_gemini_engine(
+          t_prompt, "Sen test tuzuvchi ustozsan.", tanlangan_model, DEFAULT_API_KEY
+      )
+  if st.session_state.generated_test:
+    st.markdown(st.session_state.generated_test)
 
-for m in st.session_state.messages:
-  with st.chat_message(m["role"]):
-    st.markdown(m["content"])
+with tabs[3]:
+  st.subheader("Shaxsiy Xotira Daftari")
+  if not st.session_state.saved_notes:
+    st.info("Hozircha xotiralar yo'q.")
+  else:
+    for n in st.session_state.saved_notes:
+      st.markdown(f"- {n}")
 
-prompt = st.chat_input("Savolingizni yozing...")
-if prompt:
-  st.session_state.messages.append({"role": "user", "content": prompt})
-  with st.chat_message("user"):
-    st.markdown(prompt)
+with tabs[4]:
+  st.subheader("Raqamli Kutubxona")
+  for b in st.session_state.library_books:
+    with st.expander(b["nomi"]):
+      st.write(b["mazmuni"])
 
-  with st.chat_message("assistant"):
-    resp = call_gemini_engine(prompt, tanlangan_model, DEFAULT_API_KEY)
-    st.markdown(resp)
-    st.session_state.messages.append({"role": "assistant", "content": resp})
-  st.rerun()
+with tabs[5]:
+  st.subheader("Kalkulyator")
+  expr = st.text_input("Ifodani kiriting (masalan: 25 * 4):")
+  if st.button("Hisoblash"):
+    try:
+      st.success(str(eval(expr)))
+    except Exception as e:
+      st.error(f"Xato: {e}")
+
+with tabs[6]:
+  st.subheader("Python Terminal")
+  code = st.text_area("Python kodini yozing:", value="print('Salom Tiliton!')")
+  if st.button("Bajarish"):
+    try:
+      import io
+      import sys
+
+      old = sys.stdout
+      new = io.StringIO()
+      sys.stdout = new
+      exec(code)
+      sys.stdout = old
+      st.code(new.getvalue())
+    except Exception as e:
+      st.error(f"Xato: {e}")
