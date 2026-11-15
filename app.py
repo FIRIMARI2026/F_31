@@ -2,7 +2,6 @@
 ================================================================================
 LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v17.0)
 MUALLIF: Farrux G'aybilloyev (Tiliton Tashkiloti)
-TEXNOLOGIYALAR: Python, Streamlit, Google Gemini API
 ================================================================================
 """
 
@@ -118,22 +117,11 @@ if "saved_notes" not in st.session_state:
   st.session_state.saved_notes = []
 if "library_books" not in st.session_state:
   st.session_state.library_books = [
-      {
-          "nomi": "Godrik Tili va Shifrlar",
-          "mazmuni": "Farruxning shaxsiy shifrlari va loyihalari.",
-      },
-      {
-          "nomi": "Fizika va Matematika Formulalari",
-          "mazmuni": "Kinematika va dinamika asoslari.",
-      },
+      ("Godrik Tili va Shifrlar", "Farruxning shaxsiy shifrlari."),
+      ("Fizika Formulalari", "Kinematika va dinamika asoslari."),
   ]
 if "xp" not in st.session_state:
   st.session_state.xp = 350
-if "tasks" not in st.session_state:
-  st.session_state.tasks = [
-      {"vazifa": "Fizika qonunlarini takrorlash", "holat": "Faol"},
-      {"vazifa": "Python Telegram bot yozish", "holat": "Bajarildi"},
-  ]
 if "pending_prompt" not in st.session_state:
   st.session_state.pending_prompt = None
 if "generated_test" not in st.session_state:
@@ -371,7 +359,6 @@ with tabs[2]:
 
 with tabs[3]:
   st.subheader("Shaxsiy Xotira Daftari")
-  st.write("Chatda saqlangan muhim javoblar va qoidalar:")
   if not st.session_state.saved_notes:
     st.info("Hozircha saqlangan eslatmalar yo'q.")
   else:
@@ -384,9 +371,33 @@ with tabs[3]:
 
 with tabs[4]:
   st.subheader("Raqamli Kutubxona")
-  with st.form("add_book"):
-    b_nomi = st.text_input("Material nomi:")
-    b_mazmuni = st.text_area("Mazmuni yoki matni:")
-    if st.form_submit_button("Qo'shish") and b_nomi:
-      st.session_state.library_books.append(
-          {"nomi":
+  for title, content in st.session_state.library_books:
+    with st.expander(title):
+      st.write(content)
+
+with tabs[5]:
+  st.subheader("Ilmiy Kalkulyator")
+  expr = st.text_input("Ifodani kiriting (masalan: 15 * 8 + 50):")
+  if st.button("Hisoblash"):
+    try:
+      st.success(f"Natija: {eval(expr)}")
+    except Exception as e:
+      st.error(f"Xatolik: {e}")
+
+with tabs[6]:
+  st.subheader("Python Kod Muhiti")
+  code = st.text_area("Python kodini yozing:", value="print('Salom, Tiliton!')")
+  if st.button("Kodni bajarish"):
+    try:
+      import io
+      import sys
+
+      old = sys.stdout
+      new = io.StringIO()
+      sys.stdout = new
+      exec(code)
+      sys.stdout = old
+      st.code(new.getvalue() if new.getvalue() else "Kod bajarildi.")
+    except Exception as e:
+      st.error(f"Xatolik: {e}")
+        
