@@ -1,19 +1,17 @@
 """
 ================================================================================
-LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v21.1 Final Fix)
+LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v23.0 Argon SDK)
 MUALLIF: Farrux G'aybilloyev (Tiliton Tashkiloti)
 ================================================================================
 """
 
 from datetime import datetime, timedelta
-import json
-import os
-import urllib.request
+from google import genai
 import streamlit as st
 
 DEFAULT_API_KEY = "AQ.Ab8RN6KyFWCec0HohRJRSzGzoHwD3AXwL61hPRWhWMSBXpWmgg"
 
-# 4 ta Argon modellari
+# 4 ta Argon modellarini rasmiy SDK formatiga moslaymiz
 AVAILABLE_MODELS = {
     "Argon-1 Ultra Flash": "gemini-2.5-flash",
     "Argon-2 Pro Engine": "gemini-2.5-flash",
@@ -22,7 +20,7 @@ AVAILABLE_MODELS = {
 }
 
 st.set_page_config(
-    page_title="Firimari AI v21.1 Final Edition",
+    page_title="Firimari AI v23.0 Argon SDK",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -104,10 +102,10 @@ if "saved_notes" not in st.session_state:
       ("Reja #1", "Godrik tili va fizika formulalarini takrorlash.")
   ]
 if "xp" not in st.session_state:
-  st.session_state.xp = 500
+  st.session_state.xp = 600
 
 with st.sidebar:
-  st.markdown("## FIRIMARI AI v21.1")
+  st.markdown("## FIRIMARI AI v23.0")
   st.info(f"Obuna: **{st.session_state.sub_type}**")
   if st.button("Chiqish"):
     st.session_state.authenticated = False
@@ -131,25 +129,14 @@ with st.sidebar:
     st.rerun()
 
 
-def call_argon_ai(prompt, model_name, api_key):
-  url = (
-      "https://generativelanguage.googleapis.com/v1/models/"
-      + model_name
-      + ":generateContent?key="
-      + api_key
-  )
-  payload = {
-      "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-      "generationConfig": {"temperature": 0.7},
-  }
-  headers = {"Content-Type": "application/json"}
+def call_argon_sdk(prompt, model_name, api_key):
   try:
-    req = urllib.request.Request(
-        url, data=json.dumps(payload).encode("utf-8"), headers=headers
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model=model_name,
+        contents=prompt,
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-      data = json.loads(resp.read().decode("utf-8"))
-      return data["candidates"][0]["content"]["parts"][0]["text"]
+    return response.text
   except Exception as e:
     return f"Xatolik yuz berdi: {e}"
 
@@ -179,7 +166,7 @@ with tabs[0]:
 
     with st.chat_message("assistant"):
       with st.spinner(f"{selected_argon_name} javob bermoqda..."):
-        resp = call_argon_ai(prompt, target_gemini_model, active_key)
+        resp = call_argon_sdk(prompt, target_gemini_model, active_key)
         st.markdown(resp)
       st.session_state.messages.append({"role": "assistant", "content": resp})
     st.rerun()
@@ -200,7 +187,7 @@ with tabs[2]:
   if st.button("Test Tuzish") and t_mavzu:
     test_prompt = f"{t_mavzu} bo'yicha 5 ta test savolini variantlari (A, B, C, D) va javoblari bilan tuzib ber."
     with st.spinner("Testlar tayyorlanmoqda..."):
-      st.markdown(call_argon_ai(test_prompt, target_gemini_model, active_key))
+      st.markdown(call_argon_sdk(test_prompt, target_gemini_model, active_key))
 
 with tabs[3]:
   st.subheader("📝 Shaxsiy Daftar va Eslatmalar")
