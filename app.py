@@ -1,6 +1,6 @@
 """
 ================================================================================
-LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v21.0 4-Argon)
+LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v21.1 Final Fix)
 MUALLIF: Farrux G'aybilloyev (Tiliton Tashkiloti)
 ================================================================================
 """
@@ -13,7 +13,7 @@ import streamlit as st
 
 DEFAULT_API_KEY = "AQ.Ab8RN6KyFWCec0HohRJRSzGzoHwD3AXwL61hPRWhWMSBXpWmgg"
 
-# 4 ta Argon modellari to'liq qo'shildi
+# 4 ta Argon modellari
 AVAILABLE_MODELS = {
     "Argon-1 Ultra Flash": "gemini-2.5-flash",
     "Argon-2 Pro Engine": "gemini-2.5-flash",
@@ -22,7 +22,7 @@ AVAILABLE_MODELS = {
 }
 
 st.set_page_config(
-    page_title="Firimari AI v21.0 4-Argon Edition",
+    page_title="Firimari AI v21.1 Final Edition",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -107,7 +107,7 @@ if "xp" not in st.session_state:
   st.session_state.xp = 500
 
 with st.sidebar:
-  st.markdown("## FIRIMARI AI v21.0")
+  st.markdown("## FIRIMARI AI v21.1")
   st.info(f"Obuna: **{st.session_state.sub_type}**")
   if st.button("Chiqish"):
     st.session_state.authenticated = False
@@ -121,7 +121,6 @@ with st.sidebar:
   )
   active_key = custom_key.strip() if custom_key.strip() else DEFAULT_API_KEY
 
-  # 4 ta Argon modellarini tanlash menyusi
   selected_argon_name = st.selectbox(
       "Argon Modelini Tanlang:", list(AVAILABLE_MODELS.keys())
   )
@@ -134,7 +133,7 @@ with st.sidebar:
 
 def call_argon_ai(prompt, model_name, api_key):
   url = (
-      "https://generativelanguage.googleapis.com/v1beta/models/"
+      "https://generativelanguage.googleapis.com/v1/models/"
       + model_name
       + ":generateContent?key="
       + api_key
@@ -250,4 +249,3 @@ with tabs[5]:
         st.code(new.getvalue())
       except Exception as e:
         st.error(f"Xato: {e}")
-          
