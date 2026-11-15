@@ -74,6 +74,54 @@ def init_firebase():
 
 db = init_firebase()
 
+# --- OBUNA VA PAROL TIZIMI (SaaS) ---
+VALID_SUBSCRIPTIONS = {
+    "T-1M-39K": {"type": "1 oylik obuna", "price": "39,999 UZS"},
+    "T-3M-110K": {"type": "3 oylik obuna", "price": "109,999 UZS"},
+    "T-6M-200K": {"type": "6 oylik obuna", "price": "199,999 UZS"},
+    "Tiliton-Admin-Master": {
+        "type": "Bosh Muhandis (Admin)",
+        "price": "Bepul / Asoschisi",
+    },
+}
+
+if "authenticated" not in st.session_state:
+  st.session_state.authenticated = False
+if "sub_type" not in st.session_state:
+  st.session_state.sub_type = ""
+if "sub_price" not in st.session_state:
+  st.session_state.sub_price = ""
+
+# Agar foydalanuvchi tizimga kirmagan bo'lsa, obuna oynasini ko'rsatamiz
+if not st.session_state.authenticated:
+  st.title("🔒 Firimari Aisan — Obuna Tizimi")
+  st.write(
+      "Platformadan foydalanish uchun obuna parolingizni kiriting. (1 oylik"
+      " obuna: 39,999 UZS)"
+  )
+
+  entered_code = st.text_input(
+      "Obuna yoki kirish parolini kiriting:", type="password"
+  )
+
+  if st.button("Kirish"):
+    if entered_code in VALID_SUBSCRIPTIONS:
+      st.session_state.authenticated = True
+      st.session_state.sub_type = VALID_SUBSCRIPTIONS[entered_code]["type"]
+      st.session_state.sub_price = VALID_SUBSCRIPTIONS[entered_code]["price"]
+      st.success(
+          f"Xush kelibsiz, Farrux! Faollashgan obuna: {st.session_state.sub_type}"
+          f" ({st.session_state.sub_price})"
+      )
+      st.rerun()
+    else:
+      st.error(
+          "Xato parol yoki muddati tugagan obuna! Iltimos, to'g'ri kodni"
+          " kiriting."
+      )
+
+  st.stop()
+
 # Session State initialization
 if "messages" not in st.session_state:
   st.session_state.messages = []
@@ -91,7 +139,7 @@ if "library_books" not in st.session_state:
       },
   ]
 if "xp" not in st.session_state:
-  st.session_state.xp = 120
+  st.session_state.xp = 270
 if "tasks" not in st.session_state:
   st.session_state.tasks = [
       {"vazifa": "Fizika qonunlarini takrorlash", "holat": "Bajarilmoqda"},
@@ -308,6 +356,19 @@ with st.sidebar:
   st.caption("Ultimate Imperial Ta'lim Tizimi")
   st.markdown("---")
 
+  # Obuna holatini sidebar'da ko'rsatish
+  st.markdown("### 💳 Obuna Holati")
+  st.info(
+      f"Faol: **{st.session_state.sub_type}**\nNarxi:"
+      f" **{st.session_state.sub_price}**"
+  )
+  if st.button("Chiqish (Logout)", use_container_width=True):
+    st.session_state.authenticated = False
+    st.session_state.sub_type = ""
+    st.session_state.sub_price = ""
+    st.rerun()
+
+  st.markdown("---")
   st.markdown("### Tiliton Profili")
   st.write("Foydalanuvchi: Farrux G'aybilloyev")
   st.write("Unvon: Bosh Muhandis / Asoschisi")
@@ -662,7 +723,7 @@ with tab_timer:
   with col_t1:
     st.info("25 daqiqa dars / 5 daqiqa dam olish")
     if st.button("Seansni boshlash"):
-      st.success("Diqqat rejimi yo'qildi!")
+      st.success("Diqqat rejimi yoqildi!")
   with col_t2:
     st.markdown("### Vazifalar:")
     for t in st.session_state.tasks:
