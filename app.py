@@ -101,7 +101,7 @@ if st.session_state.authenticated and st.session_state.expiry_date is not None:
     st.warning("Sizning obuna muddatingiz tugadi! Iltimos, yangi obuna oling.")
 
 if not st.session_state.authenticated:
-  st.title("🔒 Firimari Aisan — Obuna va Narxlar Tizimi")
+  st.title("🔒 Firimari AI — Obuna va Narxlar Tizimi")
   st.write(
       "Platformadan foydalanish uchun o'zingizga mos obuna kalitini kiriting:"
   )
@@ -505,29 +505,5 @@ def build_system_prompt():
       kutubxona_matni += "- " + b["nomi"] + ": " + b["mazmuni"] + "\n"
 
   return (
-      "Sen Farrux G'aybilloyev yaratgan Firimari Aisan — onlayn va jonli"
-      " ishlaydigan ta'lim platformasisan.\nXaraktering: "
-      + persona_desc
-      + "\n\nFan va sinf:\n- Fan: "
-      + tanlangan_fan
-      + "\n- Sinf: "
-      + tanlangan_sinf
-      + "\n"
-      + fan_info["yo_riqnoma"]
-      + "\n\nXotira daftari:\n"
-      + xotira_matni
-      + "\n\nKutubxona:\n"
-      + kutubxona_matni
-      + "\n\nQoidalar:\n1. Doimo sof va ravon O'zbek tilida javob ber.\n2."
-      " Matematik va fizik formulalarni LaTeX formatida yoz.\n3. Xotira va"
-      " kutubxonaga tayanib ish ko'r."
-  )
-
-
-st.title(fan_info["icon"] + " Firimari AI — Imperial Ta'lim Platformasi")
-st.markdown(
-    "<div class='subject-banner'><b>Fan:</b> "
-    + tanlangan_fan
-    + " | <b>Sinf:</b> "
-    + tanlangan_sinf
-    + " | <b>Model:</b> "
+      "Sen Farrux G'aybilloyev yarat
+    
