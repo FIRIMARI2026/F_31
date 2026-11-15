@@ -1,12 +1,11 @@
 """
 ================================================================================
-LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v20.0 Argon)
+LOYIHA: FIRIMARI AI — ULTIMATE IMPERIAL EDITION (v20.1 Argon)
 MUALLIF: Farrux G'aybilloyev (Tiliton Tashkiloti)
 ================================================================================
 """
 
 from datetime import datetime, timedelta
-import base64
 import json
 import os
 import urllib.request
@@ -14,7 +13,6 @@ import streamlit as st
 
 DEFAULT_API_KEY = "AQ.Ab8RN6KyFWCec0HohRJRSzGzoHwD3AXwL61hPRWhWMSBXpWmgg"
 
-# 4 ta Argon modellari ro'yxati
 AVAILABLE_MODELS = {
     "Argon-1 Ultra Flash": "gemini-1.5-flash",
     "Argon-2 Pro Engine": "gemini-1.5-pro",
@@ -23,7 +21,7 @@ AVAILABLE_MODELS = {
 }
 
 st.set_page_config(
-    page_title="Firimari AI v20.0 Argon Edition",
+    page_title="Firimari AI v20.1 Argon Edition",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -108,7 +106,7 @@ if "xp" not in st.session_state:
   st.session_state.xp = 450
 
 with st.sidebar:
-  st.markdown("## FIRIMARI AI v20.0")
+  st.markdown("## FIRIMARI AI v20.1")
   st.info(f"Obuna: **{st.session_state.sub_type}**")
   if st.button("Chiqish"):
     st.session_state.authenticated = False
@@ -122,7 +120,6 @@ with st.sidebar:
   )
   active_key = custom_key.strip() if custom_key.strip() else DEFAULT_API_KEY
 
-  # Argon modellarini tanlash menyusi
   selected_argon_name = st.selectbox(
       "Argon Modelini Tanlang:", list(AVAILABLE_MODELS.keys())
   )
@@ -135,20 +132,12 @@ with st.sidebar:
 
 def call_argon_ai(prompt, model_name, api_key):
   url = (
-      "https://generativelanguage.googleapis.com/v1beta/models/"
+      "https://generativelanguage.googleapis.com/v1/models/"
       + model_name
       + ":generateContent?key="
       + api_key
   )
   payload = {
-      "system_instruction": {
-          "parts": [{
-              "text": (
-                  f"Sen Farrux G'aybilloyev yaratgan Firimari Aisan."
-                  f" Foydalanayotgan Argon modeli: {selected_argon_name}."
-              )
-          }]
-      },
       "contents": [{"role": "user", "parts": [{"text": prompt}]}],
       "generationConfig": {"temperature": 0.7},
   }
