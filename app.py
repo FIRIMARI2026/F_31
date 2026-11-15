@@ -227,3 +227,72 @@ MAKTAB_FANLARI_BAZASI = {
             " platformasisan."
         ),
         "asosiy_bolimlar": ["Aniq fanlar", "Tabiiy fanlar"],
+        "tezkor_savollar": ["Nyuton qonunlari nima?"],
+    },
+    "Fizika": {
+        "icon": "⚡",
+        "tavsif": "Fizika fanidan darslik.",
+        "yo_riqnoma": "Sen fizika bo'yicha mutaxassissan.",
+        "asosiy_bolimlar": ["Kinematika", "Dinamika"],
+        "tezkor_savollar": ["Om qonuni"],
+    },
+}
+
+SINFLAR_ROYXATI = ["Barcha sinflar", "8-sinf", "9-sinf", "10-sinf", "11-sinf"]
+
+with st.sidebar:
+  st.markdown("## FIRIMARI AI v16.9")
+  st.info(f"Faol: {st.session_state.sub_type}")
+  if st.session_state.expiry_date:
+    qolgan = (st.session_state.expiry_date - datetime.now()).days
+    st.warning(f"Qolgan vaqt: {qolgan} kun")
+  else:
+    st.success("Admin")
+
+  if st.button("Chiqish"):
+    st.session_state.authenticated = False
+    st.rerun()
+
+  tanlangan_model = st.selectbox("Model:", AVAILABLE_MODELS)
+  tanlangan_fan = st.selectbox("Fan:", list(MAKTAB_FANLARI_BAZASI.keys()))
+  tanlangan_sinf = st.selectbox("Sinf:", SINFLAR_ROYXATI)
+
+fan_info = MAKTAB_FANLARI_BAZASI[tanlangan_fan]
+
+
+def build_system_prompt():
+  return (
+      f"Sen Farrux G'aybilloyev yaratgan Firimari Aisan. Fan: {tanlangan_fan}."
+  )
+
+
+st.title(f"{fan_info['icon']} Firimari AI")
+
+tabs = st.tabs(["Chat", "Mavzular", "Test", "Kalkulyator"])
+
+with tabs[0]:
+  for m in st.session_state.messages:
+    with st.chat_message(m["role"]):
+      st.markdown(m["content"])
+
+  prompt = st.chat_input("Savolingizni yozing...")
+  if prompt:
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+      st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+      resp = call_gemini_engine(
+          prompt,
+          build_system_prompt(),
+          tanlangan_model,
+          DEFAULT_API_KEY,
+          st.session_state.messages[:-1],
+      )
+      st.markdown(resp)
+      st.session_state.messages.append({"role": "assistant", "content": resp})
+    st.rerun()
+
+with tabs[1]:
+  st.subheader("Bo'limlar")
+  for b in fan_info["asosiy_bolimlar"]:
